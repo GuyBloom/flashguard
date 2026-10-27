@@ -13,4 +13,9 @@ export default defineConfig({
   use: {
     trace: "retain-on-failure",
   },
+  webServer: {
+    command: "node scripts/serve.mjs test/e2e/fixtures 8743",
+    url: "http://localhost:8743/flashing-video.html",
+    reuseExistingServer: !process.env.CI,
+  },
 });

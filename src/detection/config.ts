@@ -84,3 +84,38 @@ export const HAZARD_WINDOW_MS = 1000;
  * §5.1) is not miscounted by rounding. Not a tuning knob.
  */
 export const TIME_EPSILON_MS = 1e-6;
+
+// --- Sampler grid sizing (content layer: sampler.ts). SPEC.md §5.2. -----
+
+/**
+ * No cell should be larger than ~1/32 of the hazard area, so a flash can't
+ * be averaged away before it reaches the analyzer. SPEC.md §5.2 says "about
+ * 1,350 CSS px²" — derived here from the "low" preset's hazardAreaCssPx2
+ * rather than duplicated as a separate literal.
+ */
+export const SAMPLER_CELL_AREA_TARGET_CSS_PX2 = SENSITIVITY_PRESETS.low.hazardAreaCssPx2 / 32;
+
+/** Grid bounds, SPEC.md §5.2: "capped at 96x54 and floored at 16x9". */
+export const SAMPLER_MIN_COLS = 16;
+export const SAMPLER_MAX_COLS = 96;
+export const SAMPLER_MIN_ROWS = 9;
+export const SAMPLER_MAX_ROWS = 54;
+
+/**
+ * Consecutive all-zero-luminance samples before treating a video as
+ * unanalyzable (likely protected media painting black). **[OPEN]** (not in
+ * SPEC.md): starting value, team to confirm — about 1s at 30fps.
+ */
+export const BLACK_FRAME_STREAK_FOR_UNANALYZABLE = 30;
+
+/** A displayed video smaller than this (either dimension) is not analyzed. SPEC.md §5.6. */
+export const MIN_ANALYZABLE_CSS_PX = 64;
+
+/** Concurrent analyzers cap; prefer the largest visible. SPEC.md §5.6. */
+export const MAX_CONCURRENT_ANALYZERS = 4;
+
+/** Stay intervening until this long has passed with no hazardous result. SPEC.md §6.1. */
+export const INTERVENTION_SUSTAIN_MS = 2000;
+
+/** Never toggle the intervention on/off more than once per second. SPEC.md §6.1. */
+export const INTERVENTION_MIN_TOGGLE_GAP_MS = 1000;

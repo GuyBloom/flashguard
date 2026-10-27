@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FlashGuard test fixture</title>
+  </head>
+  <body style="margin: 0; background: #444">
+    <!--
+      A live, canvas-driven <video> — no ffmpeg/pre-rendered clip needed.
+      ?hz=N sets the full-frame black/white square wave frequency; defaults
+      to 5 Hz (hazardous under every sensitivity preset, SPEC.md §9.2 H1).
+    -->
+    <video id="v" autoplay muted playsinline style="width: 640px; height: 480px; display: block; background: #000"></video>
+    <script>
+      const hz = Number(new URLSearchParams(location.search).get("hz") ?? "5");
+      const halfPeriodMs = 500 / hz;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext("2d");
+
+      function draw(tMs) {
+        const on = Math.floor(tMs / halfPeriodMs) % 2 === 0;
+        ctx.fillStyle = on ? "#ffffff" : "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+
+      const video = document.getElementById("v");
+      video.srcObject = canvas.captureStream(30);
+      video.play().catch(() => {});
+    </script>
+  </body>
+</html>

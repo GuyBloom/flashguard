@@ -66,3 +66,14 @@ export function onSettingsChanged(callback: (settings: Settings) => void): void 
     callback(parseSettings(changes[STORAGE_KEY]?.newValue));
   });
 }
+
+export function isHostAllowed(settings: Settings, hostname: string): boolean {
+  return settings.allowedHosts.includes(hostname);
+}
+
+/** Adds `hostname` to the whitelist, if it isn't already there. "Always allow on this site". SPEC.md §6.1. */
+export async function allowHost(hostname: string): Promise<void> {
+  const settings = await getSettings();
+  if (isHostAllowed(settings, hostname)) return;
+  await setSettings({ ...settings, allowedHosts: [...settings.allowedHosts, hostname] });
+}
