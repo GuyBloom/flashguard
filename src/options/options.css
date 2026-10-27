@@ -1,0 +1,13 @@
+/* Placeholder styling. Full options design lands in build order step 6. */
+
+body {
+  margin: 0;
+  max-width: 640px;
+  padding: 24px;
+  font: 14px/1.5 system-ui, sans-serif;
+  color-scheme: light dark;
+}
+
+h1 {
+  font-size: 20px;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "flashguard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome (MV3) extension that detects hazardous flashing in web <video> and dims/blurs it.",
+  "type": "module",
+  "scripts": {
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "clips": "bash tools/generate-clips.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.7.0",
+    "vitest": "^5.0.5"
+  }
+}

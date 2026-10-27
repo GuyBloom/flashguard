@@ -1,0 +1,28 @@
+{
+  "_comment": "Expected results for the clip battery, transcribed from SPEC.md §9.2's table (column 'Expected (low)'). Clips themselves (*.mp4) are gitignored and regenerated via `npm run clips`; this manifest is checked in. Display each clip at exactly 640x480 CSS px. Only H9 has a documented cross-sensitivity expectation — SPEC.md does not claim how S1-S9 behave under 'balanced'/'high', so don't assume beyond what's written here without testing.",
+  "clips": [
+    { "id": "H1", "file": "H1_5hz.mp4", "description": "Full-screen B/W square, 5 Hz, 30 fps", "expected": "hazard" },
+    { "id": "H2", "file": "H2_6hz.mp4", "description": "Full-screen B/W, 6 Hz", "expected": "hazard" },
+    { "id": "H3", "file": "H3_16hz.mp4", "description": "Full-screen B/W, 16 Hz, 60 fps (aliasing regression)", "expected": "hazard" },
+    { "id": "H4", "file": "H4_20hz.mp4", "description": "Full-screen B/W, 20 Hz, 60 fps", "expected": "hazard" },
+    { "id": "H5", "file": "H5_24hz.mp4", "description": "Full-screen B/W, 24 Hz, 60 fps", "expected": "hazard" },
+    { "id": "H6", "file": "H6_red_5hz.mp4", "description": "#FF0000<->black, 5 Hz", "expected": "hazard", "reason": "red" },
+    { "id": "H7", "file": "H7_tri_4hz.mp4", "description": "4 Hz triangle (ramped), 120 fps source", "expected": "hazard" },
+    { "id": "H8", "file": "H8_soft_5hz.mp4", "description": "5 Hz soft-edged square (2-3 frame ramps), 60 fps", "expected": "hazard" },
+    {
+      "id": "H9",
+      "file": "H9_region_10hz.mp4",
+      "description": "200x150 region flashing 10 Hz (30,000 px^2)",
+      "expected": { "low": "safe", "balanced": "hazard" }
+    },
+    { "id": "S1", "file": "S1_1hz.mp4", "description": "Full-screen B/W, 1 Hz", "expected": "safe" },
+    { "id": "S2", "file": "S2_2hz.mp4", "description": "Full-screen B/W, 2 Hz", "expected": "safe" },
+    { "id": "S3", "file": "S3_3hz.mp4", "description": "Full-screen B/W, 3 Hz (boundary — never tune away from this at H1's expense)", "expected": "safe" },
+    { "id": "S4", "file": "S4_fade_0.25hz.mp4", "description": "2-second fades black<->white, repeating", "expected": "safe" },
+    { "id": "S5", "file": "S5_hardcut.mp4", "description": "Single hard cut white->black", "expected": "safe" },
+    { "id": "S6", "file": "S6_graydelta_5hz.mp4", "description": "5 Hz flash between gray 128 and 146 (delta ~= 0.07)", "expected": "safe" },
+    { "id": "S7", "file": "S7_brightexc_5hz.mp4", "description": "5 Hz flash between 235 and 255 (darker state ~= 0.83)", "expected": "safe" },
+    { "id": "S8", "file": "S8_region_5hz.mp4", "description": "160x120 region flashing 5 Hz (19,200 px^2)", "expected": "safe" },
+    { "id": "S9", "file": "S9_region_5hz.mp4", "description": "~80x80 region flashing 5 Hz (6,400 px^2)", "expected": "safe" }
+  ]
+}
