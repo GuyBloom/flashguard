@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NeuroShield Test Battery</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#1c2530; color:#f2efe9; padding:32px; max-width:900px; margin:0 auto; }
+  h1 { font-weight:400; }
+  h2 { font-weight:400; color:#7fb3ac; border-bottom:1px solid #354150; padding-bottom:8px; margin-top:48px; }
+  .clip { background:#232e3b; border:1px solid #354150; border-radius:12px; padding:20px; margin-bottom:20px; }
+  video { width:320px; border-radius:8px; display:block; margin-bottom:12px; }
+  .label { font-size:14px; color:#c7cdd3; line-height:1.6; }
+  .hypothesis { margin-top:10px; padding:10px; background:#1c2530; border-radius:6px; font-size:13px; }
+  .safe { color:#7fb3ac; font-weight:700; }
+  .hazard { color:#e06b6b; font-weight:700; }
+  .watch { color:#d99a4e; font-weight:700; }
+  code { background:#111820; padding:2px 6px; border-radius:4px; }
+  .fill { color:#8b929a; font-style:italic; }
+</style>
+</head>
+<body>
+<h1>NeuroShield test battery</h1>
+<p class="label">Synthetic clips, known parameters, generated via ffmpeg. Install NeuroShield from the Chrome Web Store, load this page, and note whether its overlay fires for each clip. Fill in "Actual" after testing.</p>
+
+<h2>Positive controls (should trigger — sanity check)</h2>
+<div class="clip">
+  <video src="P1_control_6hz_fullscreen.mp4" controls muted loop></video>
+  <div class="label">Full-screen B/W, 6Hz, 100% area, full luminance swing. Well within NeuroShield's stated detectable range.</div>
+  <div class="hypothesis"><span class="hazard">Expected: BLOCKS</span> · Actual: <span class="fill">[fill in]</span></div>
+</div>
+<div class="clip">
+  <video src="P2_control_6hz_red.mp4" controls muted loop></video>
+  <div class="label">Saturated red (#FF0000) / black, 6Hz. Tests their red-flash path specifically.</div>
+  <div class="hypothesis"><span class="hazard">Expected: BLOCKS</span> · Actual: <span class="fill">[fill in]</span></div>
+</div>
+
+<h2>A. Aliasing (15fps sample rate vs. real-world flash frequencies)</h2>
+<p class="label">Rendered at 60fps so the source genuinely contains these frequencies. NeuroShield samples at 15fps (Nyquist limit ~7.5Hz) — per Jordan &amp; Vanderheiden (2024), peak PPR response occurs around 16Hz, so these are the most dangerous frequencies in practice, and also the ones most likely to alias into a falsely "safe" apparent rate.</p>
+<div class="clip">
+  <video src="A1_alias_16hz_fullscreen.mp4" controls muted loop></video>
+  <div class="label">16Hz, full-screen, full swing. Near-peak PPR response rate.</div>
+  <div class="hypothesis"><span class="hazard">WCAG says: HAZARD</span> · Hypothesis: may be MISSED due to aliasing · Actual: <span class="fill">[fill in]</span></div>
+</div>
+<div class="clip">
+  <video src="A2_alias_20hz_fullscreen.mp4" controls muted loop></video>
+  <div class="label">20Hz, full-screen, full swing.</div>
+  <div class="hypothesis"><span class="hazard">WCAG says: HAZARD</span> · Hypothesis: may be MISSED due to aliasing · Actual: <span class="fill">[fill in]</span></div>
+</div>
+<div class="clip">
+  <video src="A3_alias_24hz_fullscreen.mp4" controls muted loop></video>
+  <div class="label">24Hz, full-screen, full swing.</div>
+  <div class="hypothesis"><span class="hazard">WCAG says: HAZARD</span> · Hypothesis: may be MISSED due to aliasing · Actual: <span class="fill">[fill in]</span></div>
+</div>
+
+<h2>B. Area threshold (small regions vs. WCAG's 25%-of-screen rule)</h2>
+<p class="label">NeuroShield's own unit tests show a single 8×8 "region" (1/16 = 6.25% of frame) triggers detection on its own. WCAG's actual area threshold is 25% of any 10° field of view. If these trip the overlay, NeuroShield is more conservative than WCAG requires — worth documenting as a false-positive risk, not just a miss.</p>
+<div class="clip">
+  <video src="B1_area_6pct_5hz.mp4" controls muted loop></video>
+  <div class="label">One region-sized patch (6.25% of frame, top-left), 5Hz, full swing. Rest of frame static gray.</div>
+  <div class="hypothesis"><span class="safe">WCAG says: SAFE</span> (below 25% area) · Hypothesis: NeuroShield may BLOCK anyway · Actual: <span class="fill">[fill in]</span></div>
+</div>
+<div class="clip">
+  <video src="B2_area_2pct_5hz.mp4" controls muted loop></video>
+  <div class="label">Small centered patch (~2% of frame), 5Hz, full swing.</div>
+  <div class="hypothesis"><span class="safe">WCAG says: SAFE</span> · Hypothesis: uncertain — tests where their region-grid stops catching small flashes · Actual: <span class="fill">[fill in]</span></div>
+</div>
+
+<h2>C. Multi-frame ramp (sub-threshold adjacent-frame deltas)</h2>
+<p class="label">4Hz triangle wave at 120fps: each adjacent-frame luminance delta is small (~0.07 normalized), but the full swing completes well within a fraction of a second at &gt;3 transitions/sec. Targets detectors that only diff adjacent frames rather than tracking a transition across its full duration. Approximate test — not exactly calibrated to Jordan &amp; Vanderheiden's proposed 66ms "qualifying duration," so treat as exploratory.</p>
+<div class="clip">
+  <video src="C1_ramp_4hz_120fps.mp4" controls muted loop></video>
+  <div class="label">4Hz ramped (not square) full-screen flash, 120fps source.</div>
+  <div class="hypothesis"><span class="watch">WCAG intent: likely HAZARD</span> (rate + full swing) · Hypothesis: may be MISSED (per-frame delta below their 0.1 threshold) · Actual: <span class="fill">[fill in]</span></div>
+</div>
+
+</body>
+</html>

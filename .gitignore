@@ -1,6 +1,7 @@
 node_modules/
 dist/
 test/clips/*.mp4
+test/e2e/fixtures/neuroshield-clips/*.mp4
 test/results/
 test-results/
 playwright-report/

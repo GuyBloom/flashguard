@@ -15,8 +15,15 @@
         font-size: 18px;
         margin: 0 0 4px;
       }
+      h2 {
+        font-size: 13px;
+        margin: 0 0 8px;
+        color: #9aa09d;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
       .note {
-        max-width: 720px;
+        max-width: 760px;
         color: #9aa09d;
         margin: 0 0 20px;
       }
@@ -40,6 +47,24 @@
       figcaption strong {
         color: #e7e9e7;
       }
+      figcaption .verdict {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .verdict.hazard {
+        background: #4a1f1f;
+        color: #f3b4b4;
+      }
+      .verdict.safe {
+        background: #1f3a2a;
+        color: #a9e0bf;
+      }
       figcaption .cite {
         display: block;
         margin-top: 4px;
@@ -60,136 +85,41 @@
     <h1>FlashGuard vs. NeuroShield</h1>
     <p class="note">
       <strong>Set FlashGuard's sensitivity to Low before this page</strong> (popup → sensitivity slider, all the way
-      left). Low is the literal WCAG-standard threshold — our "Balanced"/"High" presets are our own unvalidated
-      starting guesses, not WCAG-derived, and at Balanced the region case on the right can trip FlashGuard's own grid
-      too (SPEC.md §7's defaults use Balanced; this comparison is specifically about the WCAG standard itself).
+      left) — the literal WCAG-standard threshold, not our own unvalidated "Balanced"/"High" presets.
       <br /><br />
-      With both extensions enabled, FlashGuard should intervene on the left video and leave the right one alone.
-      Verified live against a real NeuroShield install: a naively-timed 16 Hz square wave did <strong>not</strong> get
-      missed — it takes the precise frame-accurate construction below to reproduce the miss. Treat the right-hand
-      (area-rule) case as <strong>unverified against this page's exact construction</strong> until checked the same
-      way; this page only drives FlashGuard's own pipeline and can't assert what NeuroShield does either way.
+      Real ffmpeg-rendered clips from <code>neuroshield-files/</code>, each confirmed live against a real NeuroShield
+      install at every one of its sensitivity settings. With both extensions enabled: FlashGuard intervenes on the
+      left video and leaves the right one alone; NeuroShield does the opposite on both. (NeuroShield handled the rest
+      of our test battery correctly, so those clips are left off this page.)
     </p>
+
     <div class="grid">
       <figure>
-        <video id="alias16" autoplay muted playsinline data-mode="alias16"></video>
+        <h2>False negative — a hazard NeuroShield misses</h2>
+        <video src="neuroshield-clips/D1_checker_reversal_6hz.mp4" autoplay muted loop playsinline data-mode="checker6"></video>
         <figcaption>
-          <strong>16 Hz full-frame flash, frame-accurate at 60fps — hazardous.</strong> Near the peak seizure-response
-          rate. A fixed-15fps sampler can't resolve a 16 Hz signal (aliasing) — but only reliably misses it with
-          frame-accurate construction (mostly 2 white + 2 black frames, periodically dropping one to hold the exact
-          16 Hz average); a wall-clock-timed approximation was not missed in testing. FlashGuard samples at the
-          video's actual presented frame rate regardless of how the signal was constructed, and should intervene
-          within ~1-2s.
-          <span class="cite">SPEC.md §4 documents the 16 Hz miss; the frame-accurate construction needed to reliably reproduce it was found via live testing, not written down there.</span>
+          <span class="verdict hazard">WCAG: hazard</span>
+          <strong>8×8 checkerboard reversing at 6Hz (12 reversals/sec), full swing, 60fps source.</strong> Every square
+          flashes black↔white at the same rate and swing as NeuroShield's own 6Hz full-screen control, which it blocks.
+          WCAG counts the combined area of concurrent flashes, so this is a full-frame hazard (and pattern reversal
+          is a recognized trigger in its own right). NeuroShield averages each region of a 32×32 grid, and every
+          region it checks holds equal black and white, so each average stays flat. Its own docs list this as a
+          known limit. FlashGuard tracks each cell separately and intervenes within ~0.5s.
+          <span class="cite">neuroshield-files/D1_checker_reversal_6hz.mp4 — confirmed not blocked live, at every NeuroShield sensitivity setting</span>
         </figcaption>
       </figure>
       <figure>
-        <video id="region19k" autoplay muted playsinline data-mode="region19k"></video>
+        <h2>False positive — safe content NeuroShield blocks</h2>
+        <video src="neuroshield-clips/B1_area_6pct_5hz.mp4" autoplay muted loop playsinline data-mode="area6pct"></video>
         <figcaption>
-          <strong>160×120 region, 5 Hz — 19,200 px² = 6.25% of the 640×480 frame — safe.</strong> WCAG's area rule
-          calls this safe (SPEC.md S8). NeuroShield's documented 4×4-grid false positive (SPEC.md §4) was on a
-          naively-constructed clip, same as the 16 Hz case started out — given that one didn't hold up to a frame-
-          accurate construction, treat "NeuroShield blocks this anyway" as <strong>unverified on this exact
-          page</strong> until checked live the same way. FlashGuard measures the area in real CSS pixels and should
-          leave it untouched regardless.
-          <span class="cite">SPEC.md §4: "blocked a flash covering only 6.25% of the frame" (unverified against this page's construction)</span>
+          <span class="verdict safe">WCAG: safe</span>
+          <strong>160×120 patch (6.25% of the 640×480 frame), 5Hz, top-left.</strong> Below WCAG's 25%-of-view area
+          rule, so not a hazard — but it fills one of NeuroShield's 4×4 grid regions (1/16 = 6.25% of frame), so it
+          blocks this anyway: an unnecessary intervention on safe content. FlashGuard measures area in real CSS
+          pixels against the actual WCAG threshold and leaves it untouched.
+          <span class="cite">neuroshield-files/B1_area_6pct_5hz.mp4 — confirmed blocked live, at every NeuroShield sensitivity setting</span>
         </figcaption>
       </figure>
     </div>
-
-    <script>
-      function drive(videoEl, drawFrame, fps) {
-        const canvas = document.createElement("canvas");
-        canvas.width = 640;
-        canvas.height = 480;
-        const ctx = canvas.getContext("2d");
-        function tick(tMs) {
-          drawFrame(ctx, tMs);
-          requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
-        videoEl.srcObject = canvas.captureStream(fps);
-        videoEl.play().catch(() => {});
-      }
-
-      // Frame-accurate variant: canvas.captureStream(fps) paces its own
-      // internal sampling, decoupled from requestAnimationFrame (which runs
-      // at the *display's* refresh rate -- 120Hz+ on plenty of laptops now),
-      // so there's no guaranteed 1:1 correspondence between draw calls and
-      // delivered video frames. captureStream(0) puts the track in manual
-      // mode (no automatic sampling); we pace draws ourselves on a fixed
-      // setTimeout schedule and call track.requestFrame() right after each
-      // one, so "frame index" and "delivered video frame" are exactly the
-      // same thing, regardless of the viewer's display refresh rate.
-      //
-      // This precision is what the 16 Hz case specifically needs: a
-      // wall-clock-timed square wave (jittery) did NOT reliably reproduce
-      // the aliasing beat that fools a 15fps sampler -- verified against a
-      // real NeuroShield install. The clip that DOES get missed uses
-      // frame-counted generation: mostly 2 white + 2 black frames (= 15 Hz
-      // at 60fps), periodically dropping one frame to hold the long-run
-      // average at exactly 16 Hz. frameSquareWave below is the general/exact
-      // form of that -- a Bresenham-style accumulator on the integer frame
-      // index, so the average frequency is exact by construction, with
-      // individual cycles varying by +/-1 frame as needed (the same "drop a
-      // frame periodically" effect).
-      function driveFrameAccurate(videoEl, drawFrame, fps) {
-        const canvas = document.createElement("canvas");
-        canvas.width = 640;
-        canvas.height = 480;
-        const ctx = canvas.getContext("2d");
-        const stream = canvas.captureStream(0);
-        const track = stream.getVideoTracks()[0];
-        videoEl.srcObject = stream;
-        videoEl.play().catch(() => {});
-
-        const intervalMs = 1000 / fps;
-        let frame = 0;
-        let nextAt = performance.now();
-        function tick() {
-          drawFrame(ctx, frame);
-          track.requestFrame();
-          frame++;
-          nextAt += intervalMs;
-          setTimeout(tick, Math.max(0, nextAt - performance.now()));
-        }
-        tick();
-      }
-
-      function frameSquareWave(frameIndex, hz, fps) {
-        const halfCyclesElapsed = Math.floor((frameIndex * hz * 2) / fps);
-        return halfCyclesElapsed % 2 === 0;
-      }
-
-      function squareWave(tMs, hz) {
-        return Math.floor(tMs / (500 / hz)) % 2 === 0;
-      }
-
-      // 60fps source so the 16 Hz square wave itself renders cleanly —
-      // matches SPEC.md's H3 clip methodology. FlashGuard samples whatever
-      // rate actually gets presented via requestVideoFrameCallback.
-      driveFrameAccurate(
-        document.getElementById("alias16"),
-        (ctx, frame) => {
-          ctx.fillStyle = frameSquareWave(frame, 16, 60) ? "#ffffff" : "#000000";
-          ctx.fillRect(0, 0, 640, 480);
-        },
-        60,
-      );
-
-      // 160x120 flashing patch on a gray background — SPEC.md S8 (19,200 px²).
-      // 5 Hz divides 30fps evenly (6 frames/cycle), so wall-clock timing is
-      // already frame-exact here; no change needed.
-      drive(
-        document.getElementById("region19k"),
-        (ctx, t) => {
-          ctx.fillStyle = "#808080";
-          ctx.fillRect(0, 0, 640, 480);
-          ctx.fillStyle = squareWave(t, 5) ? "#ffffff" : "#000000";
-          ctx.fillRect(0, 0, 160, 120);
-        },
-        30,
-      );
-    </script>
   </body>
 </html>
