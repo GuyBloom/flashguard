@@ -47,6 +47,7 @@ class VideoController {
     private settings: Settings,
     private readonly onState: (state: VideoState) => void,
     onAllowSite: () => void,
+    private readonly onPlaybackChange: () => void,
   ) {
     this.analyzer = new FlashAnalyzer(settings.sensitivity);
     this.intervention = new Intervention(video, settings.mode, {
@@ -58,11 +59,18 @@ class VideoController {
   }
 
   private attachVideoListeners(): void {
+    // Playback state is part of eligibility, so a change must re-run the
+    // registry's rebalance: otherwise a video that scrolled into view while
+    // still paused (autoplay not started yet) is never analyzed.
     const onPlay = (): void => {
+      if (this.playing) return;
       this.playing = true;
+      this.onPlaybackChange();
     };
     const onPause = (): void => {
+      if (!this.playing) return;
       this.playing = false;
+      this.onPlaybackChange();
     };
     // seeking/emptied/loadstart: a source change or seek invalidates the
     // analyzer's running history. SPEC.md §5.6.
@@ -119,23 +127,35 @@ class VideoController {
     return this.widthCss * this.heightCss;
   }
 
-  setActive(active: boolean): void {
+  /**
+   * `protecting` is false only when protection itself is off (FlashGuard
+   * disabled, or the site allowed). Deactivating for any other reason --
+   * scrolled out of view, paused, tab hidden, over the analyzer cap -- keeps
+   * an engaged intervention in place: releasing it there meant scrolling
+   * back showed the raw flashing until re-detection, and toggled the
+   * intervention once per scroll (SPEC.md §6.1 toggle rule).
+   */
+  setActive(active: boolean, protecting: boolean): void {
+    if (!active && !protecting && this.state === "intervening") {
+      this.intervention.release();
+      this.hysteresis.reset();
+      this.setState(this.active ? "analyzing" : "idle");
+    }
     if (active === this.active) return;
     this.active = active;
 
     if (active) {
+      this.hysteresis.resume(performance.now());
       this.sampler = new VideoSampler(this.video, {
         onSample: (sample, geom) => this.handleSample(sample, geom),
         onUnanalyzable: (reason) => this.handleUnanalyzable(reason),
       });
       this.sampler.start();
-      this.setState(this.state === "allowed" ? "allowed" : "analyzing");
+      if (this.state !== "allowed" && this.state !== "intervening") this.setState("analyzing");
     } else {
       this.sampler?.stop();
       this.sampler = null;
-      this.intervention.release();
-      this.hysteresis.reset();
-      if (this.state !== "allowed" && this.state !== "unanalyzable") this.setState("idle");
+      if (this.state !== "allowed" && this.state !== "unanalyzable" && this.state !== "intervening") this.setState("idle");
     }
     this.syncHud();
   }
@@ -300,6 +320,7 @@ export class VideoRegistry {
         this.settings,
         (state) => this.callbacks.onStateChange(video, state),
         () => this.callbacks.onAllowSiteRequested(),
+        () => this.rebalance(),
       );
       this.controllers.set(video, controller);
       this.intersectionObserver?.observe(video);
@@ -314,9 +335,10 @@ export class VideoRegistry {
     const eligible = [...this.controllers.values()].filter((c) => c.eligible(hostAllowed));
     eligible.sort((a, b) => b.displayedAreaCssPx2 - a.displayedAreaCssPx2);
     const activeSet = new Set(eligible.slice(0, MAX_CONCURRENT_ANALYZERS));
+    const protecting = this.settings.enabled && !hostAllowed;
 
     for (const controller of this.controllers.values()) {
-      controller.setActive(activeSet.has(controller));
+      controller.setActive(activeSet.has(controller), protecting);
     }
   }
 }

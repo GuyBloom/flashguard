@@ -45,6 +45,16 @@ export class InterventionHysteresis {
     return this.engaged;
   }
 
+  /**
+   * Analysis is resuming after a pause in sampling (scrolled back into view,
+   * replayed, tab shown). If engaged, restart the sustain window from now so
+   * the intervention holds while the analyzer rebuilds its history, instead
+   * of releasing on the first non-hazardous result and re-engaging ~1s later.
+   */
+  resume(nowMs: number): void {
+    if (this.engaged) this.lastHazardMs = nowMs;
+  }
+
   reset(): void {
     this.lastHazardMs = null;
     this.lastToggleMs = null;

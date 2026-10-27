@@ -31,4 +31,19 @@ describe("InterventionHysteresis (SPEC.md §6.1)", () => {
     h.reset();
     expect(h.update(false, 10)).toBe(false);
   });
+
+  it("resume() restarts the sustain window when engaged, so a sampling gap doesn't release it", () => {
+    const h = new InterventionHysteresis(2000, 1000);
+    h.update(true, 0); // engaged, then the video scrolls out of view
+    h.resume(10_000); // back in view 10s later; analyzer history is empty
+    expect(h.update(false, 10_016)).toBe(true);
+    expect(h.update(false, 11_999)).toBe(true);
+    expect(h.update(false, 12_000)).toBe(false); // no hazard re-detected within sustainMs
+  });
+
+  it("resume() does nothing when not engaged", () => {
+    const h = new InterventionHysteresis(2000, 1000);
+    h.resume(0);
+    expect(h.update(false, 16)).toBe(false);
+  });
 });
