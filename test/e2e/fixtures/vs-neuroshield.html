@@ -64,29 +64,35 @@
       starting guesses, not WCAG-derived, and at Balanced the region case on the right can trip FlashGuard's own grid
       too (SPEC.md §7's defaults use Balanced; this comparison is specifically about the WCAG standard itself).
       <br /><br />
-      Both cases below are the documented NeuroShield failures from <code>SPEC.md</code> §4 (lessons from testing it
-      against synthetic clips with known parameters). With both extensions enabled, FlashGuard should intervene on the
-      left video and leave the right one alone; NeuroShield is expected to do the <strong>opposite</strong> on each —
-      verify live, since this page only drives FlashGuard's own pipeline and can't assert what NeuroShield does.
+      With both extensions enabled, FlashGuard should intervene on the left video and leave the right one alone.
+      Verified live against a real NeuroShield install: a naively-timed 16 Hz square wave did <strong>not</strong> get
+      missed — it takes the precise frame-accurate construction below to reproduce the miss. Treat the right-hand
+      (area-rule) case as <strong>unverified against this page's exact construction</strong> until checked the same
+      way; this page only drives FlashGuard's own pipeline and can't assert what NeuroShield does either way.
     </p>
     <div class="grid">
       <figure>
         <video id="alias16" autoplay muted playsinline data-mode="alias16"></video>
         <figcaption>
-          <strong>16 Hz full-frame flash, 60 fps source — hazardous.</strong> Near the peak seizure-response rate.
-          NeuroShield samples at a fixed 15 fps; 15 samples/sec can't resolve a 16 Hz signal (classic aliasing), so it
-          <strong>misses this one</strong>. FlashGuard samples at the video's actual presented frame rate and should
-          intervene within ~1-2s.
-          <span class="cite">SPEC.md §4: "blocked 20 Hz and 24 Hz … but missed 16 Hz"</span>
+          <strong>16 Hz full-frame flash, frame-accurate at 60fps — hazardous.</strong> Near the peak seizure-response
+          rate. A fixed-15fps sampler can't resolve a 16 Hz signal (aliasing) — but only reliably misses it with
+          frame-accurate construction (mostly 2 white + 2 black frames, periodically dropping one to hold the exact
+          16 Hz average); a wall-clock-timed approximation was not missed in testing. FlashGuard samples at the
+          video's actual presented frame rate regardless of how the signal was constructed, and should intervene
+          within ~1-2s.
+          <span class="cite">SPEC.md §4 documents the 16 Hz miss; the frame-accurate construction needed to reliably reproduce it was found via live testing, not written down there.</span>
         </figcaption>
       </figure>
       <figure>
         <video id="region19k" autoplay muted playsinline data-mode="region19k"></video>
         <figcaption>
           <strong>160×120 region, 5 Hz — 19,200 px² = 6.25% of the 640×480 frame — safe.</strong> WCAG's area rule
-          calls this safe (SPEC.md S8). NeuroShield downsamples to a 4×4 grid and <strong>blocks this anyway</strong>.
-          FlashGuard measures the area in real CSS pixels and should leave it untouched.
-          <span class="cite">SPEC.md §4: "blocked a flash covering only 6.25% of the frame"</span>
+          calls this safe (SPEC.md S8). NeuroShield's documented 4×4-grid false positive (SPEC.md §4) was on a
+          naively-constructed clip, same as the 16 Hz case started out — given that one didn't hold up to a frame-
+          accurate construction, treat "NeuroShield blocks this anyway" as <strong>unverified on this exact
+          page</strong> until checked live the same way. FlashGuard measures the area in real CSS pixels and should
+          leave it untouched regardless.
+          <span class="cite">SPEC.md §4: "blocked a flash covering only 6.25% of the frame" (unverified against this page's construction)</span>
         </figcaption>
       </figure>
     </div>
@@ -106,6 +112,55 @@
         videoEl.play().catch(() => {});
       }
 
+      // Frame-accurate variant: canvas.captureStream(fps) paces its own
+      // internal sampling, decoupled from requestAnimationFrame (which runs
+      // at the *display's* refresh rate -- 120Hz+ on plenty of laptops now),
+      // so there's no guaranteed 1:1 correspondence between draw calls and
+      // delivered video frames. captureStream(0) puts the track in manual
+      // mode (no automatic sampling); we pace draws ourselves on a fixed
+      // setTimeout schedule and call track.requestFrame() right after each
+      // one, so "frame index" and "delivered video frame" are exactly the
+      // same thing, regardless of the viewer's display refresh rate.
+      //
+      // This precision is what the 16 Hz case specifically needs: a
+      // wall-clock-timed square wave (jittery) did NOT reliably reproduce
+      // the aliasing beat that fools a 15fps sampler -- verified against a
+      // real NeuroShield install. The clip that DOES get missed uses
+      // frame-counted generation: mostly 2 white + 2 black frames (= 15 Hz
+      // at 60fps), periodically dropping one frame to hold the long-run
+      // average at exactly 16 Hz. frameSquareWave below is the general/exact
+      // form of that -- a Bresenham-style accumulator on the integer frame
+      // index, so the average frequency is exact by construction, with
+      // individual cycles varying by +/-1 frame as needed (the same "drop a
+      // frame periodically" effect).
+      function driveFrameAccurate(videoEl, drawFrame, fps) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext("2d");
+        const stream = canvas.captureStream(0);
+        const track = stream.getVideoTracks()[0];
+        videoEl.srcObject = stream;
+        videoEl.play().catch(() => {});
+
+        const intervalMs = 1000 / fps;
+        let frame = 0;
+        let nextAt = performance.now();
+        function tick() {
+          drawFrame(ctx, frame);
+          track.requestFrame();
+          frame++;
+          nextAt += intervalMs;
+          setTimeout(tick, Math.max(0, nextAt - performance.now()));
+        }
+        tick();
+      }
+
+      function frameSquareWave(frameIndex, hz, fps) {
+        const halfCyclesElapsed = Math.floor((frameIndex * hz * 2) / fps);
+        return halfCyclesElapsed % 2 === 0;
+      }
+
       function squareWave(tMs, hz) {
         return Math.floor(tMs / (500 / hz)) % 2 === 0;
       }
@@ -113,16 +168,18 @@
       // 60fps source so the 16 Hz square wave itself renders cleanly —
       // matches SPEC.md's H3 clip methodology. FlashGuard samples whatever
       // rate actually gets presented via requestVideoFrameCallback.
-      drive(
+      driveFrameAccurate(
         document.getElementById("alias16"),
-        (ctx, t) => {
-          ctx.fillStyle = squareWave(t, 16) ? "#ffffff" : "#000000";
+        (ctx, frame) => {
+          ctx.fillStyle = frameSquareWave(frame, 16, 60) ? "#ffffff" : "#000000";
           ctx.fillRect(0, 0, 640, 480);
         },
         60,
       );
 
       // 160x120 flashing patch on a gray background — SPEC.md S8 (19,200 px²).
+      // 5 Hz divides 30fps evenly (6 frames/cycle), so wall-clock timing is
+      // already frame-exact here; no change needed.
       drive(
         document.getElementById("region19k"),
         (ctx, t) => {
