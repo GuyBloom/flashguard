@@ -64,5 +64,23 @@ export const RED_SATURATION_RATIO = 0.8;
 /** Minimum CIE 1976 UCS (u', v') distance for a red flash's "other" state. SPEC.md §5.1. */
 export const RED_OTHER_STATE_MIN_UV_DISTANCE = 0.2;
 
+/**
+ * A non-red state darker than this (relative luminance) counts as "different"
+ * from saturated red regardless of its u'v' distance. SPEC.md §5.1 says "a
+ * black or very dark state counts as a different state" but gives no number.
+ * **[OPEN]** (not in SPEC.md): starting value, team to confirm.
+ */
+export const RED_DARK_STATE_MAX_LUM = 0.01;
+
 /** A sample gap longer than this resets the analyzer instead of interpolating. SPEC.md §5.2. */
 export const MAX_GAP_MS = 100;
+
+/** "More than three flashes in any one-second period". WCAG 2.3.1, SPEC.md §5.1. */
+export const HAZARD_WINDOW_MS = 1000;
+
+/**
+ * Floating-point tolerance for timestamp comparisons only, so a span that is
+ * exactly HAZARD_WINDOW_MS in exact arithmetic (the 3 Hz boundary, SPEC.md
+ * §5.1) is not miscounted by rounding. Not a tuning knob.
+ */
+export const TIME_EPSILON_MS = 1e-6;

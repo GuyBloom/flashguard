@@ -5,9 +5,10 @@ Chrome (Manifest V3) extension that detects hazardous flashing in web
 epilepsy. See `SPEC.md` for the full product/engineering spec and
 `CLAUDE.md` for the non-negotiables.
 
-**Status**: scaffold only (build order step 1). `src/detection/*` and
-`src/content/*` are typed stubs that throw `not implemented` — the real
-algorithm lands in the following build-order steps.
+**Status**: build order step 2 done. `src/detection/*` implements the
+reference algorithm (SPEC.md §5.4) with the unit suite in `test/unit/`.
+`src/content/*` are still typed stubs that throw `not implemented` (steps
+4-5).
 
 ## Setup
 
@@ -49,7 +50,8 @@ npm run clips
 ```
 
 Runs `tools/generate-clips.sh` (requires `ffmpeg`, e.g. `brew install
-ffmpeg`). Writes the hazard/safe clip battery (H1-H9, S1-S9) into
+ffmpeg`). Gray recipes start from `format=gray` so Chrome decodes the
+intended 8-bit levels; see the comment in the script. Writes the hazard/safe clip battery (H1-H9, S1-S9) into
 `test/clips/` — `.mp4` files are gitignored and regenerated on demand;
 `test/clips/manifest.json` (checked in) records each clip's expected
 result, from SPEC.md §9.2.
@@ -79,6 +81,9 @@ never hard-coded. Current list (see `SPEC.md` for each one's section):
 - Default sensitivity (`balanced`, matching the Figma prototype's slider
   default — not necessarily the "right" default for real-world tuning).
 - Optional "hide videos FlashGuard can't check" setting (default off).
+- `RED_DARK_STATE_MAX_LUM` (0.01): how dark a state must be to count as
+  "different" from saturated red regardless of chromaticity. SPEC.md §5.1
+  says "very dark" without a number.
 - The exact definition of the ≤250ms latency target (measured from the 7th
   alternating qualifying transition, not from flash onset — needs
   confirmation from the team).

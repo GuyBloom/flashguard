@@ -18,11 +18,19 @@ OUT_DIR="$(dirname "$0")/../test/clips"
 mkdir -p "$OUT_DIR"
 cd "$OUT_DIR"
 
-# --- Appendix recipes, verbatim ---------------------------------------
+# --- Appendix recipes ---------------------------------------------------
+#
+# Deviation from SPEC.md's appendix: gen_flash, gen_tri and gen_soft there
+# write geq luma straight into YUV. libx264 tags that as limited (TV) range,
+# so Chrome decodes Y=16..235 as 0..255: Y=235 and Y=255 both show as white,
+# and mid grays shift (measured in Chromium: 235<->255 decoded as constant
+# 255, 128<->146 as 130<->151). Every gray recipe here starts from
+# format=gray (full-range gray, as gen_region already does), so ffmpeg
+# converts to TV range and Chrome decodes back to the intended 8-bit values.
 
 # Full-frame luminance square wave: gen_flash NAME HZ FPS SECS
 gen_flash() {
-  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=$4,geq=lum='if(lt(mod(T*$2\,1)\,0.5)\,255\,0)':cb=128:cr=128" \
+  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=$4,format=gray,geq=lum='if(lt(mod(T*$2\,1)\,0.5)\,255\,0)'" \
     -pix_fmt yuv420p -c:v libx264 "$1.mp4"
 }
 
@@ -40,13 +48,13 @@ gen_red() {
 
 # Triangle (ramped) wave: gen_tri NAME HZ FPS
 gen_tri() {
-  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=6,geq=lum='128+127*(2*abs(2*($2*T-floor($2*T+0.5)))-1)':cb=128:cr=128" \
+  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=6,format=gray,geq=lum='128+127*(2*abs(2*($2*T-floor($2*T+0.5)))-1)'" \
     -pix_fmt yuv420p -c:v libx264 "$1.mp4"
 }
 
 # Soft-edged square (ramp ~ 1/GAIN of a half period): gen_soft NAME HZ FPS GAIN
 gen_soft() {
-  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=6,geq=lum='128+127*clip($4*(2*abs(2*($2*T-floor($2*T+0.5)))-1)\,-1\,1)':cb=128:cr=128" \
+  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=6,format=gray,geq=lum='128+127*clip($4*(2*abs(2*($2*T-floor($2*T+0.5)))-1)\,-1\,1)'" \
     -pix_fmt yuv420p -c:v libx264 "$1.mp4"
 }
 
@@ -55,14 +63,14 @@ gen_soft() {
 # Full-frame square wave between two 8-bit luminance levels (not just 0/255):
 # gen_flash_levels NAME HZ FPS SECS LO HI
 gen_flash_levels() {
-  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=$4,geq=lum='if(lt(mod(T*$2\,1)\,0.5)\,$6\,$5)':cb=128:cr=128" \
+  ffmpeg -y -f lavfi -i "color=size=640x480:rate=$3:duration=$4,format=gray,geq=lum='if(lt(mod(T*$2\,1)\,0.5)\,$6\,$5)'" \
     -pix_fmt yuv420p -c:v libx264 "$1.mp4"
 }
 
 # Single hard cut from one level to another at the midpoint: gen_cut NAME SECS LO HI
 gen_cut() {
   half=$(echo "$2 / 2" | bc -l)
-  ffmpeg -y -f lavfi -i "color=size=640x480:rate=30:duration=$2,geq=lum='if(lt(T\,$half)\,$4\,$3)':cb=128:cr=128" \
+  ffmpeg -y -f lavfi -i "color=size=640x480:rate=30:duration=$2,format=gray,geq=lum='if(lt(T\,$half)\,$4\,$3)'" \
     -pix_fmt yuv420p -c:v libx264 "$1.mp4"
 }
 
