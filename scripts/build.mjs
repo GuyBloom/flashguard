@@ -25,6 +25,7 @@ await build({
 });
 
 await cp("manifest.json", `${DIST}/manifest.json`);
+await cp("src/shared/theme.css", `${DIST}/shared/theme.css`);
 await cp("src/popup/popup.html", `${DIST}/popup/popup.html`);
 await cp("src/popup/popup.css", `${DIST}/popup/popup.css`);
 await cp("src/options/options.html", `${DIST}/options/options.html`);

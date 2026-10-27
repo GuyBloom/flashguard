@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FlashGuard demo scenarios</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #1c1f1e;
+        color: #e7e9e7;
+        font: 14px/1.4 system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      p {
+        color: #9aa09d;
+        margin: 0 0 20px;
+        max-width: 640px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 640px);
+        gap: 24px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #9aa09d;
+      }
+      video {
+        display: block;
+        background: #000;
+        width: 640px;
+        height: 480px;
+      }
+      code {
+        color: #e7e9e7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>FlashGuard demo scenarios</h1>
+    <p>
+      Four live, canvas-driven videos — no ffmpeg or pre-rendered clips needed. Each one is a real
+      <code>&lt;video&gt;</code> element, sampled by the real <code>requestVideoFrameCallback</code> pipeline. Turn on
+      Debug HUD in the popup to see live stats on each.
+    </p>
+    <div class="grid">
+      <figure>
+        <video id="hazard" autoplay muted playsinline data-mode="hazard"></video>
+        <figcaption><strong>Hazard</strong> — full-frame black/white, 5 Hz. Should intervene within ~1-2s.</figcaption>
+      </figure>
+      <figure>
+        <video id="safe" autoplay muted playsinline data-mode="safe"></video>
+        <figcaption><strong>Safe</strong> — full-frame black/white, 1 Hz. Should never intervene.</figcaption>
+      </figure>
+      <figure>
+        <video id="red" autoplay muted playsinline data-mode="red"></video>
+        <figcaption><strong>Red flash</strong> — saturated red ↔ black, 5 Hz, luminance delta below 0.10. Only the red rule catches it.</figcaption>
+      </figure>
+      <figure>
+        <video id="region" autoplay muted playsinline data-mode="region"></video>
+        <figcaption><strong>Sub-threshold region</strong> — small flashing patch (SPEC.md S9-sized), 5 Hz. Should stay safe — too small to matter.</figcaption>
+      </figure>
+    </div>
+
+    <script>
+      function drive(videoEl, drawFrame) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext("2d");
+        function tick(tMs) {
+          drawFrame(ctx, tMs);
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        videoEl.srcObject = canvas.captureStream(30);
+        videoEl.play().catch(() => {});
+      }
+
+      function squareWave(tMs, hz) {
+        return Math.floor(tMs / (500 / hz)) % 2 === 0;
+      }
+
+      drive(document.getElementById("hazard"), (ctx, t) => {
+        ctx.fillStyle = squareWave(t, 5) ? "#ffffff" : "#000000";
+        ctx.fillRect(0, 0, 640, 480);
+      });
+
+      drive(document.getElementById("safe"), (ctx, t) => {
+        ctx.fillStyle = squareWave(t, 1) ? "#ffffff" : "#000000";
+        ctx.fillRect(0, 0, 640, 480);
+      });
+
+      // Saturated red <-> a mid-gray (not black), luminance delta kept
+      // small so only the red rule (not the luminance rule) can catch it.
+      drive(document.getElementById("red"), (ctx, t) => {
+        ctx.fillStyle = squareWave(t, 5) ? "rgb(230,40,30)" : "rgb(90,90,90)";
+        ctx.fillRect(0, 0, 640, 480);
+      });
+
+      // ~80x80 flashing patch on a gray background (SPEC.md S9: 6,400 px^2,
+      // well under every sensitivity preset's hazard area).
+      drive(document.getElementById("region"), (ctx, t) => {
+        ctx.fillStyle = "#808080";
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.fillStyle = squareWave(t, 5) ? "#ffffff" : "#000000";
+        ctx.fillRect(280, 200, 80, 80);
+      });
+    </script>
+  </body>
+</html>

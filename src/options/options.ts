@@ -1,9 +1,8 @@
-// Options page. SPEC.md §6.3.
-//
-// Functional but plain — real controls on real settings, visual design
-// parity with the Figma prototype is still build order step 6.
+// Options page. SPEC.md §6.3. Visual language borrowed from figma-project
+// (../shared/theme.css + ../shared/icons.ts).
 
 import type { Sensitivity } from "../detection/types";
+import { icon } from "../shared/icons";
 import { getSettings, type InterventionMode, type Settings, setSettings } from "../shared/settings";
 
 const MODES: { value: InterventionMode; label: string }[] = [
@@ -17,6 +16,15 @@ const SENSITIVITIES: { value: Sensitivity; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
+function section(kickerText: string): HTMLElement {
+  const el = document.createElement("section");
+  const kicker = document.createElement("span");
+  kicker.className = "section-kicker";
+  kicker.textContent = kickerText;
+  el.appendChild(kicker);
+  return el;
+}
+
 async function render(): Promise<void> {
   const app = document.getElementById("app");
   if (!app) return;
@@ -24,46 +32,70 @@ async function render(): Promise<void> {
   const settings = await getSettings();
   const update = (patch: Partial<Settings>) => setSettings({ ...settings, ...patch }).then(render);
 
-  // Keep the <h1> from the HTML shell; replace everything after it.
-  for (const node of [...app.children].slice(1)) node.remove();
+  app.replaceChildren();
 
-  const modeSection = document.createElement("section");
-  modeSection.innerHTML = "<h2>Default intervention behavior</h2>";
-  const modeRow = document.createElement("div");
+  const header = document.createElement("div");
+  header.className = "options-header";
+  const logo = document.createElement("div");
+  logo.className = "logo-box";
+  logo.appendChild(icon("shield", 20));
+  const h1 = document.createElement("h1");
+  h1.textContent = "FlashGuard Settings";
+  header.append(logo, h1);
+  app.appendChild(header);
+
+  // --- defaults: mode -------------------------------------------------------
+  const modeSection = section("DEFAULT INTERVENTION BEHAVIOR");
+  const modeOptions = document.createElement("div");
+  modeOptions.className = "mode-options";
   for (const { value, label } of MODES) {
     const button = document.createElement("button");
-    button.textContent = settings.mode === value ? `[${label}]` : label;
+    button.type = "button";
+    button.className = settings.mode === value ? "selected" : "";
+    button.textContent = label;
     button.addEventListener("click", () => update({ mode: value }));
-    modeRow.appendChild(button);
+    modeOptions.appendChild(button);
   }
-  modeSection.appendChild(modeRow);
+  modeSection.appendChild(modeOptions);
   app.appendChild(modeSection);
 
-  const sensSection = document.createElement("section");
-  sensSection.innerHTML = "<h2>Default sensitivity</h2>";
-  const sensRow = document.createElement("div");
+  // --- defaults: sensitivity --------------------------------------------------
+  const sensSection = section("DEFAULT SENSITIVITY");
+  const sensOptions = document.createElement("div");
+  sensOptions.className = "mode-options";
   for (const { value, label } of SENSITIVITIES) {
     const button = document.createElement("button");
-    button.textContent = settings.sensitivity === value ? `[${label}]` : label;
+    button.type = "button";
+    button.className = settings.sensitivity === value ? "selected" : "";
+    button.textContent = label;
     button.addEventListener("click", () => update({ sensitivity: value }));
-    sensRow.appendChild(button);
+    sensOptions.appendChild(button);
   }
-  sensSection.appendChild(sensRow);
+  sensSection.appendChild(sensOptions);
   app.appendChild(sensSection);
 
-  const whitelistSection = document.createElement("section");
-  whitelistSection.innerHTML = `<h2>Website exceptions (${settings.allowedHosts.length})</h2>`;
+  // --- website exceptions ------------------------------------------------------
+  const whitelistSection = section(`WEBSITE EXCEPTIONS · ${settings.allowedHosts.length}`);
   if (settings.allowedHosts.length === 0) {
-    const empty = document.createElement("p");
-    empty.textContent = "No saved exceptions.";
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.appendChild(icon("globe", 22));
+    const strong = document.createElement("strong");
+    strong.textContent = "No saved exceptions";
+    const p = document.createElement("p");
+    p.textContent = "Websites you trust will appear here.";
+    empty.append(strong, p);
     whitelistSection.appendChild(empty);
   } else {
     const list = document.createElement("ul");
+    list.className = "exception-list";
     for (const host of settings.allowedHosts) {
       const item = document.createElement("li");
       const name = document.createElement("span");
-      name.textContent = `${host} `;
+      name.append(icon("globe", 14), ` ${host}`);
       const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "button button--ghost";
       remove.textContent = "Remove";
       remove.addEventListener("click", () => update({ allowedHosts: settings.allowedHosts.filter((h) => h !== host) }));
       item.append(name, remove);
@@ -73,28 +105,29 @@ async function render(): Promise<void> {
   }
   app.appendChild(whitelistSection);
 
+  // --- advanced: debug HUD ---------------------------------------------------
   const advanced = document.createElement("details");
+  advanced.open = settings.debugHud;
   const summary = document.createElement("summary");
   summary.textContent = "Advanced";
-  advanced.appendChild(summary);
   const hudLabel = document.createElement("label");
   const hudCheckbox = document.createElement("input");
   hudCheckbox.type = "checkbox";
   hudCheckbox.checked = settings.debugHud;
   hudCheckbox.addEventListener("change", () => update({ debugHud: hudCheckbox.checked }));
-  hudLabel.append(hudCheckbox, " Developer: Debug HUD");
-  advanced.appendChild(hudLabel);
+  hudLabel.append(hudCheckbox, "Developer: Debug HUD");
+  advanced.append(summary, hudLabel);
   app.appendChild(advanced);
 
+  // --- about & limitations ------------------------------------------------------
   const about = document.createElement("section");
-  about.innerHTML = `
-    <h2>About &amp; limitations</h2>
-    <p>FlashGuard is not a medical device. It reduces risk based on the
-    WCAG 2.3.1 "Three Flashes or Below Threshold" thresholds, not a clinical
-    standard. It cannot check every video (cross-origin DRM-protected frames,
-    for example) and cannot guarantee protection even for the video it can
-    check.</p>
-  `;
+  about.className = "about-section";
+  const aboutTitle = document.createElement("h2");
+  aboutTitle.textContent = "About & limitations";
+  const aboutBody = document.createElement("p");
+  aboutBody.textContent =
+    "FlashGuard is not a medical device. It reduces risk based on the WCAG 2.3.1 “Three Flashes or Below Threshold” thresholds, not a clinical standard. It cannot check every video (cross-origin DRM-protected frames, for example) and cannot guarantee protection even for the video it can check.";
+  about.append(aboutTitle, aboutBody);
   app.appendChild(about);
 }
 

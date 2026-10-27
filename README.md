@@ -8,10 +8,11 @@ epilepsy. See `SPEC.md` for the full product/engineering spec and
 **Status**: build order steps 1-5 done. The real pipeline runs end to end:
 video discovery (`video-registry.ts`) → sampling (`sampler.ts`) → detection
 (`src/detection/*`) → intervention with hysteresis (`intervention.ts`),
-plus the debug HUD. Popup/options are functional (real settings, real
-status line) but not yet the Figma-matched visual design — that polish is
-still open. `background/service-worker.ts`'s per-tab badge aggregation is
-the remaining piece of step 6.
+plus the debug HUD. Popup/options are functional and restyled with the
+Figma prototype's visual language (`src/shared/theme.css`, `icons.ts`) —
+not a pixel-exact port of its multi-page nav, but the same look.
+`background/service-worker.ts`'s per-tab badge aggregation is the
+remaining piece of step 6.
 
 ## Setup
 
@@ -40,9 +41,11 @@ To see it actually intervene: open the popup, turn on **Debug HUD** (under
 "More settings…"), then visit any page with a real `<video>` playing a fast
 flash (5 Hz+, full-frame, high contrast) — the HUD overlay shows live fps,
 grid size, transitions-in-window, and peak flashing area. You don't need a
-real flashing site to check this: `test/e2e/fixtures/flashing-video.html`
-(served locally, see **E2E tests** below) drives a live canvas into a
-`<video>` at a chosen Hz — no ffmpeg or pre-rendered clip required.
+real flashing site to check this, or ffmpeg: `node scripts/serve.mjs
+test/e2e/fixtures 8743`, then open
+
+- `http://localhost:8743/flashing-video.html?hz=5` (or `?hz=1` for safe) — one live canvas-driven video, Hz controlled by the query param
+- `http://localhost:8743/demo.html` — four side by side (hazard, safe, red flash, sub-threshold region), good for a quick demo
 
 ## Unit tests
 
@@ -77,11 +80,13 @@ npm run test:e2e
 Playwright, loading the built extension from `dist/` in a persistent
 Chromium context (`test/e2e/fixtures.ts`), against a local static server
 (`scripts/serve.mjs`) serving `test/e2e/fixtures/`. Besides the popup smoke
-test, `flashing.spec.ts` drives a real, live-flashing `<video>` (via
+test: `flashing.spec.ts` drives a real, live-flashing `<video>` (via
 `canvas.captureStream()` — no ffmpeg needed) and checks that the real
 pipeline engages `data-flashguard-state="intervening"` for a 5 Hz flash and
-doesn't for a 1 Hz one. The full ffmpeg clip-battery suite and results
-table (SPEC.md §9.3) are still build order step 7.
+doesn't for a 1 Hz one; `demo-scenarios.spec.ts` asserts the same against
+`fixtures/demo.html`'s four scenarios (hazard, safe, red flash,
+sub-threshold region). The full ffmpeg clip-battery suite and results table
+(SPEC.md §9.3) are still build order step 7.
 
 ## Open items
 

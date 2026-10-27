@@ -1,17 +1,164 @@
-/* Placeholder styling. Full popup design lands in build order step 6. */
+/* Popup-specific layout. Tokens/base components come from ../shared/theme.css. */
 
 body {
-  margin: 0;
-  width: 320px;
-  font: 14px/1.4 system-ui, sans-serif;
-  color-scheme: light dark;
+  width: 360px;
 }
 
-#app {
-  padding: 16px;
+.popup-header {
+  min-height: 56px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-bottom: 1px solid var(--line);
+}
+.logo-box {
+  width: 33px;
+  height: 33px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--paper);
+  background: var(--dark);
+  border-radius: 4px;
+}
+.popup-brand strong {
+  display: block;
+  font-size: 14px;
+}
+.popup-brand span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
 }
 
-h1 {
-  font-size: 16px;
-  margin: 0 0 8px;
+.popup-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.protection-card,
+.site-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--wash);
+}
+.protection-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+.protection-card h2 {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.protection-card p {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.protection-card--off {
+  background: #f2eded;
+  border-color: #bba8a8;
+}
+@media (prefers-color-scheme: dark) {
+  .protection-card--off {
+    background: #2a1f1f;
+    border-color: #6b4a4a;
+  }
+}
+
+.site-card {
+  background: var(--paper);
+}
+.site-card strong {
+  font-size: 12px;
+}
+.site-card p {
+  margin: 9px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mode-options button {
+  min-height: 38px;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 650;
+}
+.mode-options button.selected {
+  border: 2px solid var(--ink);
+  background: var(--wash);
+}
+
+.sensitivity {
+  width: 100%;
+  margin-top: 9px;
+  accent-color: var(--ink);
+}
+.range-labels {
+  margin-top: -2px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--muted);
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-toggle strong {
+  font-size: 11px;
+}
+
+.settings-link {
+  width: 100%;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: underline;
+}
+
+.popup-footer {
+  min-height: 26px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  background: var(--wash);
+  color: var(--muted);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
