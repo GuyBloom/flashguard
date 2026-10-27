@@ -1,0 +1,10 @@
+{
+  "description": "Detects and reduces exposure to hazardous flashing in online videos to help users with photosensitive epilepsy browse safely and confidently.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
