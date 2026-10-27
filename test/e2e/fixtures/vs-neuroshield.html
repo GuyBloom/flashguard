@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FlashGuard vs. NeuroShield</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #1c1f1e;
+        color: #e7e9e7;
+        font: 14px/1.4 system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      .note {
+        max-width: 720px;
+        color: #9aa09d;
+        margin: 0 0 20px;
+      }
+      .note strong {
+        color: #e7e9e7;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 640px);
+        gap: 24px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        margin-top: 8px;
+        max-width: 640px;
+        font-size: 12px;
+        color: #9aa09d;
+      }
+      figcaption strong {
+        color: #e7e9e7;
+      }
+      figcaption .cite {
+        display: block;
+        margin-top: 4px;
+        color: #6a736e;
+      }
+      video {
+        display: block;
+        background: #000;
+        width: 640px;
+        height: 480px;
+      }
+      code {
+        color: #e7e9e7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>FlashGuard vs. NeuroShield</h1>
+    <p class="note">
+      <strong>Set FlashGuard's sensitivity to Low before this page</strong> (popup → sensitivity slider, all the way
+      left). Low is the literal WCAG-standard threshold — our "Balanced"/"High" presets are our own unvalidated
+      starting guesses, not WCAG-derived, and at Balanced the region case on the right can trip FlashGuard's own grid
+      too (SPEC.md §7's defaults use Balanced; this comparison is specifically about the WCAG standard itself).
+      <br /><br />
+      Both cases below are the documented NeuroShield failures from <code>SPEC.md</code> §4 (lessons from testing it
+      against synthetic clips with known parameters). With both extensions enabled, FlashGuard should intervene on the
+      left video and leave the right one alone; NeuroShield is expected to do the <strong>opposite</strong> on each —
+      verify live, since this page only drives FlashGuard's own pipeline and can't assert what NeuroShield does.
+    </p>
+    <div class="grid">
+      <figure>
+        <video id="alias16" autoplay muted playsinline data-mode="alias16"></video>
+        <figcaption>
+          <strong>16 Hz full-frame flash, 60 fps source — hazardous.</strong> Near the peak seizure-response rate.
+          NeuroShield samples at a fixed 15 fps; 15 samples/sec can't resolve a 16 Hz signal (classic aliasing), so it
+          <strong>misses this one</strong>. FlashGuard samples at the video's actual presented frame rate and should
+          intervene within ~1-2s.
+          <span class="cite">SPEC.md §4: "blocked 20 Hz and 24 Hz … but missed 16 Hz"</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <video id="region19k" autoplay muted playsinline data-mode="region19k"></video>
+        <figcaption>
+          <strong>160×120 region, 5 Hz — 19,200 px² = 6.25% of the 640×480 frame — safe.</strong> WCAG's area rule
+          calls this safe (SPEC.md S8). NeuroShield downsamples to a 4×4 grid and <strong>blocks this anyway</strong>.
+          FlashGuard measures the area in real CSS pixels and should leave it untouched.
+          <span class="cite">SPEC.md §4: "blocked a flash covering only 6.25% of the frame"</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <script>
+      function drive(videoEl, drawFrame, fps) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext("2d");
+        function tick(tMs) {
+          drawFrame(ctx, tMs);
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        videoEl.srcObject = canvas.captureStream(fps);
+        videoEl.play().catch(() => {});
+      }
+
+      function squareWave(tMs, hz) {
+        return Math.floor(tMs / (500 / hz)) % 2 === 0;
+      }
+
+      // 60fps source so the 16 Hz square wave itself renders cleanly —
+      // matches SPEC.md's H3 clip methodology. FlashGuard samples whatever
+      // rate actually gets presented via requestVideoFrameCallback.
+      drive(
+        document.getElementById("alias16"),
+        (ctx, t) => {
+          ctx.fillStyle = squareWave(t, 16) ? "#ffffff" : "#000000";
+          ctx.fillRect(0, 0, 640, 480);
+        },
+        60,
+      );
+
+      // 160x120 flashing patch on a gray background — SPEC.md S8 (19,200 px²).
+      drive(
+        document.getElementById("region19k"),
+        (ctx, t) => {
+          ctx.fillStyle = "#808080";
+          ctx.fillRect(0, 0, 640, 480);
+          ctx.fillStyle = squareWave(t, 5) ? "#ffffff" : "#000000";
+          ctx.fillRect(0, 0, 160, 120);
+        },
+        30,
+      );
+    </script>
+  </body>
+</html>
