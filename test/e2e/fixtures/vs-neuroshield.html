@@ -114,8 +114,9 @@
         <figcaption>
           <span class="verdict safe">WCAG: safe</span>
           <strong>160×120 patch (6.25% of the 640×480 frame), 5Hz, top-left.</strong> Below WCAG's 25%-of-view area
-          rule, so not a hazard — but it fills one of NeuroShield's 4×4 grid regions (1/16 = 6.25% of frame), so it
-          blocks this anyway: an unnecessary intervention on safe content. FlashGuard measures area in real CSS
+          rule, so not a hazard. NeuroShield averages each quarter of the frame and flags it when that average swings
+          by 0.1; this patch is a quarter of the top-left quarter, so that quarter's average swings ~0.25 and
+          NeuroShield blocks it anyway: an unnecessary intervention on safe content. FlashGuard measures area in real CSS
           pixels against the actual WCAG threshold and leaves it untouched.
           <span class="cite">neuroshield-files/B1_area_6pct_5hz.mp4 — confirmed blocked live, at every NeuroShield sensitivity setting</span>
         </figcaption>

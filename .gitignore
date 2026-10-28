@@ -2,6 +2,9 @@ node_modules/
 dist/
 test/clips/*.mp4
 test/e2e/fixtures/neuroshield-clips/*.mp4
+# Except the two clips vs-neuroshield.html plays, so the demo runs from a fresh clone.
+!test/e2e/fixtures/neuroshield-clips/B1_area_6pct_5hz.mp4
+!test/e2e/fixtures/neuroshield-clips/D1_checker_reversal_6hz.mp4
 test/results/
 test-results/
 playwright-report/
