@@ -42,3 +42,25 @@ test/e2e/fixtures 8743`, then open
 - `http://localhost:8743/flashing-video.html?hz=5` (or `?hz=1` for safe) — one live canvas-driven video, Hz controlled by the query param
 - `http://localhost:8743/demo.html` — four side by side (hazard, safe, red flash, sub-threshold region), good for a quick demo
 
+## Open items
+
+Anything marked **[OPEN]** in `SPEC.md` is implemented as a config value,
+never hard-coded. Current list (see `SPEC.md` for each one's section):
+
+- Hazard window size: 416×416 CSS px vs. the WCAG note's 341×256 (both kept
+  in config; "balanced"/"high" presets use the smaller one).
+- `balanced` and `high` sensitivity preset values are starting guesses, to
+  tune against the clip battery.
+- Default intervention mode (`blur`, per SPEC.md §6.1).
+- Default sensitivity (`balanced`, matching the Figma prototype's slider
+  default — not necessarily the "right" default for real-world tuning).
+- Optional "hide videos FlashGuard can't check" setting (default off).
+- `RED_DARK_STATE_MAX_LUM` (0.01): how dark a state must be to count as
+  "different" from saturated red regardless of chromaticity. SPEC.md §5.1
+  says "very dark" without a number.
+- `BLACK_FRAME_STREAK_FOR_UNANALYZABLE` (30 consecutive samples, ~1s at
+  30fps): not in SPEC.md, a starting guess for how long a video must paint
+  all-black before we call it unanalyzable rather than genuinely dark.
+- The exact definition of the ≤250ms latency target (measured from the 7th
+  alternating qualifying transition, not from flash onset — needs
+  confirmation from the team).
