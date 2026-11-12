@@ -1,14 +1,5 @@
 # FlashGuard: Product & Engineering Spec
 
-Audience: Claude Code and the team. Read this fully before writing code.
-
-Rules for using this spec:
-- If a shortcut conflicts with this spec, follow the spec. If the spec is ambiguous or looks wrong, stop and ask.
-- Items marked **[OPEN]** are undecided. Implement them as configuration constants, never as hard-coded behavior.
-- Every numeric threshold must live in one config module with a comment naming its source.
-
----
-
 ## 1. Product summary
 
 FlashGuard is a desktop Chrome extension (Manifest V3) that detects hazardous flashing in web video in real time and dims or blurs it before the user sees it. It is for people with photosensitive epilepsy (PSE).
@@ -335,16 +326,6 @@ Notes:
 7. Playwright E2E over the whole clip battery and the results table.
 8. Performance, privacy, and accessibility audits. Fix findings.
 9. Stretch: GIF and CSS animation detection.
-
----
-
-## 11. Working agreements for Claude Code
-- Start by proposing a short plan, then work in small steps. Run `npm test` after each module. Show failures; do not hide them.
-- Never loosen a threshold or weaken a test to make it pass. If a test looks wrong, explain why and ask.
-- Cite the source in a comment for any threshold change.
-- Keep `detection/` pure. Keep dependencies at zero at runtime.
-- Keep the README current with how to build, load unpacked, run tests, and regenerate clips.
-- When something here is marked **[OPEN]**, implement it as config and list the open items back to the team at the end of each session.
 
 ---
 
