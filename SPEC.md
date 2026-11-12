@@ -9,21 +9,8 @@ FlashGuard is a desktop Chrome extension (Manifest V3) that detects hazardous fl
 - Everything runs locally in the browser. There is no server and there are no network requests.
 
 **Primary user ("Alex")**: a remote worker who is online 8+ hours a day and wants to browse media-heavy sites without fearing an untagged, unannounced trigger.
+
 **Secondary users**: people with migraine or visual sensitivity, and caregivers who install or configure the extension for someone else.
-**Important**: nobody on the dev team has PSE. Do not rely on team intuition. Default to conservative behavior and plain-language UI.
-
-**Not a medical device.** UI copy must never claim FlashGuard prevents seizures, is medically validated, or guarantees WCAG compliance. It reduces risk based on the WCAG 2.3.1 thresholds.
-
-### Design principles (from the persona checklist)
-1. **Detect**: analyze changing visual content for hazardous flashing, including untagged media.
-2. **Intervene**: prefer a localized dim/blur over removing frames or restructuring the page.
-3. **Fail safely**: when the tool cannot analyze something, say so. Never silently imply it is safe. Always give a clear user control.
-4. **Preserve**: keep keyboard navigation, screen-reader semantics, media controls, and layout intact.
-5. **Tune**: quick per-site whitelisting, reversible overrides, transparent settings.
-6. **Validate**: test false positives, missed triggers, latency, and WCAG scenarios against real decoded video.
-
-### Timeline context
-MVP complete Nov 6. First testing Nov 9. Project freeze Dec 4. Final demo Dec 11. Prioritize a correct, tested `<video>` detector over breadth.
 
 ---
 
@@ -43,8 +30,7 @@ MVP complete Nov 6. First testing Nov 9. Project freeze Dec 4. Final demo Dec 11
 
 ## 3. Architecture
 
-Manifest V3, TypeScript (strict), no runtime dependencies. Dev dependencies are allowed: a bundler (esbuild or Vite), Vitest, Playwright, TypeScript. **Ask before adding any dependency.**
-
+Manifest V3, TypeScript (strict), no runtime dependencies. Dev dependencies are allowed: a bundler (esbuild or Vite), Vitest, Playwright, TypeScript. 
 ```
 flashguard/
   manifest.json
@@ -73,29 +59,16 @@ flashguard/
   tools/generate-clips.sh
   README.md
 ```
-
-**Ownership** (for review boundaries): Detection team owns `src/detection`, `sampler.ts`, performance/privacy audit. Interface team owns `popup`, `options`, `intervention.ts`, accessibility. Validation owns `test/`, `tools/`, release candidate.
-
-**The detection module must not import anything from `content/`, `popup/`, or `chrome`.** It takes numbers in and returns a verdict. This is the key testability boundary.
-
-### Manifest requirements
-- `content_scripts`: `matches: ["<all_urls>"]`, `all_frames: true`, `match_about_blank: true`, `run_at: "document_idle"`.
-- Permissions: `storage` only. No `tabs`, no `webRequest`, no host permissions beyond the content-script match. To get the current hostname for the popup, ask the content script by message.
-- Background: service worker (non-persistent). It must keep no state that cannot be rebuilt.
-- Minimum Chrome version 110.
-
 ---
 
 ## 4. Lessons from prior art (design constraints)
 
 We tested an existing extension (NeuroShield) against synthetic clips with known parameters. These observations shape the design:
 
-- It samples at a fixed **15 fps**. It blocked 20 Hz and 24 Hz full-screen flashing but **missed 16 Hz**, which is near the peak seizure-response rate. This is consistent with sampling-rate aliasing. → **Sample at the video's presented-frame rate, never a fixed low rate.**
-- It downsamples to 32×32 and analyzes a 4×4 grid, and it blocked a flash covering only 6.25% of the frame. WCAG's area rule would call that safe. → **Use the WCAG area rule measured in CSS pixels, not "any region flashes".**
-- Its unit tests feed hand-built luminance numbers and never exercise real decoded video. → **Our acceptance tests run against real clips in real Chrome.**
-- It produced false positives on YouTube hover previews. → **Require alternating transitions meeting duration, magnitude, count, and area criteria, not just "something changed".**
-
-Do not claim a cause for any NeuroShield behavior beyond what is stated here.
+- It samples at a fixed **15 fps**. It blocked 20 Hz and 24 Hz full-screen flashing but **missed 16 Hz**, which is near the peak seizure-response rate. This is consistent with sampling-rate aliasing. 
+- It downsamples to 32×32 and analyzes a 4×4 grid, and it blocked a flash covering only 6.25% of the frame. WCAG's area rule would call that safe. 
+- Its unit tests feed hand-built luminance numbers and never exercise real decoded video. 
+- It produced false positives on YouTube hover previews. 
 
 ---
 
@@ -152,7 +125,7 @@ export class FlashAnalyzer {
 ```
 
 ### 5.4 Reference algorithm
-Implement this unless you find a better approach that passes every test in section 9.
+
 
 1. **Per-cell transition detection.** Keep, per cell, a deque of `(t, y)` covering the last `qualifyingMs`. At each sample compute `minW` and `maxW` over that window.
    - Emit **UP** if `y − minW ≥ minLumDelta`, `minW < darkerStateMax`, and the last emitted direction for this cell was not UP.
@@ -184,7 +157,7 @@ Values for "low" come from the sources above. **[OPEN]** The balanced and high v
 - State machine per video: `idle → analyzing → intervening → analyzing`, plus `unanalyzable` and `allowed`.
 
 ### 5.7 Unanalyzable video
-If drawing the video taints the canvas (`getImageData` throws a `SecurityError`) or frames are persistently all-black (likely protected media), set state `unanalyzable`. Do not claim it is safe:
+If drawing the video taints the canvas (`getImageData` throws a `SecurityError`) or frames are persistently all-black (likely protected media), set state `unanalyzable`. 
 - show a small, non-intrusive "FlashGuard can't check this video" indicator on the video, and list the count in the popup;
 - offer a manual "Hide this video" control;
 - **[OPEN]** an optional setting "Hide videos FlashGuard can't check" (default off).
@@ -244,9 +217,7 @@ interface Settings {
   debugHud: boolean;                 // default false
 }
 ```
-- Use **`chrome.storage.local`, never `sync`**. Syncing would send whitelisted hostnames (browsing data) to a Google account.
-- Content scripts read settings at start and subscribe to `chrome.storage.onChanged`. Changes apply live, without a reload.
-- Validate and migrate on read. Unknown or corrupt data falls back to defaults.
+
 
 ---
 
@@ -255,8 +226,7 @@ interface Settings {
 - Main-thread analysis ≤ 2 ms per frame at p95 on a reference laptop. Added CPU ≤ 5% and no extra dropped frames during 1080p60 playback. Optimize only after correctness. Moving analysis to a Worker is allowed later.
 - Memory: only a ring buffer of about 1.2 s of per-cell luminance. Never store frames or screenshots.
 - **Zero network requests.** No analytics, telemetry, remote code, remote fonts, or `eval`. Verify with DevTools network inspection and a code grep.
-- Wrap all page-facing code in try/catch. A FlashGuard failure must never break the host page. On an unexpected error, put the video in `unanalyzable`.
-- Do not change page layout. Everything FlashGuard adds lives in its Shadow-DOM host plus the reversible inline filter.
+
 
 ---
 
