@@ -40,9 +40,11 @@ grid size, transitions-in-window, and peak flashing area.
 
 2. Look at the different settings for covering hazardous content, note how the extension reacts.
 
-3. Adjust the sensitivity of the extension, how does it differ on different content?
+3. Adjust the sensitivity in the extension, how does it differ on different content?
 
-4. You don't need a real flashing site to check this either, for a demo we have created, run: `node scripts/serve.mjs
+4. Try trusting a site, does it continue to trust as you navigate to different areas of the site?
+
+5. You don't need a real flashing site to check this either, for a demo we have created, run: `node scripts/serve.mjs
 test/e2e/fixtures 8743`, then open
 - `http://localhost:8743/flashing-video.html?hz=5` (or `?hz=1` for safe) — one live canvas-driven video, Hz controlled by the query param
 - `http://localhost:8743/demo.html` — four side by side (hazard, safe, red flash, sub-threshold region), good for a quick demo
